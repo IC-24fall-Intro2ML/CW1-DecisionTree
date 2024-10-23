@@ -148,13 +148,22 @@ def kfoldCV(k, X_y, maxd):
     return accs, np.average(accs)
 
 
+def confusionMatrix(y, y_hat, cat_count):
+    #cat_count = np.unique(np.concatenate(y, y_hat)).shape[0]
 
+    conf = np.zeros(cat_count, cat_count)
+
+    for Y, Yhat in zip(y, y_hat):
+        
+        conf[Y, Yhat] += 1
+
+    return conf
 
 
 clean_data = np.loadtxt("./clean_dataset.txt")
 
 
-tree, d = decision_tree_learning(clean_data, 0, 4)
+tree, d = decision_tree_learning(clean_data, 0, 10)
 
 
 def visualize_tree(node, depth=0, x=0.5, y=1.0, x_offset=0.3, ax=None):
@@ -200,7 +209,8 @@ def visualize_tree(node, depth=0, x=0.5, y=1.0, x_offset=0.3, ax=None):
 
 visualize_tree(tree, depth=0, x=0.5, y=1.0, x_offset=0.1, ax=None)
 
-print(kfoldCV(10, clean_data, 5))
+#print(kfoldCV(10, clean_data, 5))
 
 print(evaluate_accuracy(tree, clean_data))
+
 
