@@ -3,6 +3,9 @@ import matplotlib.pyplot as plt
 
 # Left nodes contain x <= than value
 
+
+# stump = nodes, used interchangably here
+
 class stump:
 
 
@@ -11,6 +14,8 @@ class stump:
     value = None
     left = None
     right = None
+
+    leafcount = None
 
     def __init__(self):
 
@@ -34,7 +39,13 @@ def decision_tree_learning(X_y, d, max_d):
         new_stump = stump()
         #new_stump.label = X_y[:,-1][0]
 
-        new_stump.label = np.bincount(X_y[:, -1].astype(int)).argmax()
+        binnedCount = np.bincount(X_y[:, -1].astype(int))
+
+        new_stump.label = binnedCount.argmax()
+
+
+
+        new_stump.leafcount = np.pad(binnedCount, (0, max(0, 5 - len(binnedCount))))
 
         return new_stump, d
     
@@ -100,6 +111,41 @@ def entropy(X_y):
     return H
 
 
+def find_prunable_nodes(node):
+    
+    prunable_nodes = []
+    
+    
+    if node is None or node.feature is None:
+        return prunable_nodes
+    
+    # Check if both children are leaf nodes
+    if node.left and node.right:
+        if node.left.feature is None and node.right.feature is None:
+            # If both are leaf nodes, add the current node to the list
+            prunable_nodes.append(node)
+
+    # Recursively check the left and right subtrees
+    prunable_nodes += find_prunable_nodes(node.left)
+    prunable_nodes += find_prunable_nodes(node.right)
+
+    return prunable_nodes
+    
+def pruneOneStump(s):
+
+    totalBinnedCounts = s.left.leafcount + s.right.leafcount
+
+    s.label = totalBinnedCounts.argmax()
+
+    s.leafcount = totalBinnedCounts
+
+    s.feature = None
+
+    s.value = None
+
+    s.left = None
+    s.right = None
+
 
 def evaluate_accuracy(tree, X_test_y):
 
@@ -121,6 +167,44 @@ def evaluate_accuracy(tree, X_test_y):
     acc = correct_ct / X_test.shape[0]
     
     return acc
+
+
+
+def pruneTree(tree, validationSet):
+
+    baseAcc = evaluate_accuracy(tree, validationSet)
+
+    improvement = True
+
+    while(improvement):
+        candidateNodes = find_prunable_nodes(tree)
+        improvement = False
+        
+
+        for node in candidateNodes:
+
+            # info for undoing the prune
+            leftChild = node.left
+            rightChild = node.right
+            feature = node.feature
+            value = node.value
+
+            pruneOneStump(node)
+
+            if (evaluate_accuracy(tree, validationSet) < baseAcc):
+
+                # undo the prune if the accuracy got worse
+                node.left = leftChild
+                node.right = rightChild
+                node.feature = feature
+                node.value = value
+
+                node.label = None
+                node.leafcount = None
+            else:
+                improvement = True
+                break
+
 
 
 
@@ -212,5 +296,4 @@ visualize_tree(tree, depth=0, x=0.5, y=1.0, x_offset=0.1, ax=None)
 #print(kfoldCV(10, clean_data, 5))
 
 print(evaluate_accuracy(tree, clean_data))
-
 
