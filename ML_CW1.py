@@ -1,5 +1,5 @@
 import numpy as np
-import matplotlib as plt
+import matplotlib.pyplot as plt
 
 # Left nodes contain x <= than value
 
@@ -123,9 +123,84 @@ def evaluate_accuracy(tree, X_test_y):
     return acc
 
 
-clean_data = np.loadtxt("./noisy_dataset.txt")
+
+def kfoldCV(k, X_y, maxd):
+
+    accs = np.zeros(k)
+
+    validationSize = X_y.shape[0]//k
+
+    shuffledX_y = np.random.permutation(X_y)
+
+    for i in range(k):
+
+        start = (i) * validationSize
+        end = (i + 1) * validationSize
+
+        validationSet = shuffledX_y[start:end,:]
+
+        trainingSet = np.delete(shuffledX_y, np.s_[start:end], axis=0)
+
+        tree, d = decision_tree_learning(trainingSet, 0, maxd)
+
+        accs[i] = evaluate_accuracy(tree, validationSet)
+
+    return accs, np.average(accs)
+
+
+
+
+
+clean_data = np.loadtxt("./clean_dataset.txt")
 
 
 tree, d = decision_tree_learning(clean_data, 0, 4)
 
+
+def visualize_tree(node, depth=0, x=0.5, y=1.0, x_offset=0.3, ax=None):
+
+    if ax is None:
+        plt.close('all') 
+        fig, ax = plt.subplots(figsize=(100, 80)) 
+        ax.set_xlim(0, 1)
+        ax.set_ylim(0, 1)
+        ax.set_axis_off()
+
+
+    if node is None:
+        return
+
+   
+    if node.feature is None:
+        ax.text(x, y, f'Label: {node.label}', bbox=dict(facecolor='white', edgecolor='black'), ha='center')
+    else:
+        ax.text(x, y, f'Feature: {node.feature}\n<= {node.value}', bbox=dict(facecolor='white', edgecolor='black'), ha='center')
+
+   
+    next_y = y - 0.1  # Move downwards for child
+    next_x_offset = x_offset / (depth + 0.3)  # Reduce x_offset as depth increases
+
+
+
+    if node.left:
+        next_x_left = x - next_x_offset  # Move left child to the left
+        ax.plot([x, next_x_left], [y, next_y], 'k-')  # Draw line to the left child
+        visualize_tree(node.left, depth + 1, next_x_left, next_y, x_offset, ax)
+
+
+    if node.right:
+        next_x_right = x + next_x_offset  
+        ax.plot([x, next_x_right], [y, next_y], 'k-')  
+        visualize_tree(node.right, depth + 1, next_x_right, next_y, x_offset, ax)
+
+    if depth == 0:
+        plt.show()
+
+
+
+visualize_tree(tree, depth=0, x=0.5, y=1.0, x_offset=0.1, ax=None)
+
+print(kfoldCV(10, clean_data, 5))
+
 print(evaluate_accuracy(tree, clean_data))
+
