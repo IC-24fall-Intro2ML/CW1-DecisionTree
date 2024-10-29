@@ -232,6 +232,38 @@ def kfoldCV(k, X_y, maxd):
     return accs, np.average(accs)
 
 
+
+def pruneTest(vsize, X_y, maxd):
+
+    
+
+    validationSize = X_y.shape[0]//(1/vsize)
+
+    shuffledX_y = np.random.permutation(X_y)
+
+    
+
+    start = 0
+    end = int(validationSize)
+
+    validationSet = shuffledX_y[start:end,:]
+
+    trainingSet = np.delete(shuffledX_y, np.s_[start:end], axis=0)
+
+    tree, d = decision_tree_learning(trainingSet, 0, maxd)
+
+    pre_acc = evaluate_accuracy(tree, validationSet)
+
+    pruneTree(tree, validationSet)
+
+    post_acc = evaluate_accuracy(tree, validationSet)
+
+    train_acc = evaluate_accuracy(tree, trainingSet)
+
+    return train_acc, pre_acc, post_acc
+
+
+
 def confusionMatrix(y, y_hat, cat_count):
     #cat_count = np.unique(np.concatenate(y, y_hat)).shape[0]
 
@@ -244,10 +276,7 @@ def confusionMatrix(y, y_hat, cat_count):
     return conf
 
 
-clean_data = np.loadtxt("./clean_dataset.txt")
 
-
-tree, d = decision_tree_learning(clean_data, 0, 10)
 
 
 def visualize_tree(node, depth=0, x=0.5, y=1.0, x_offset=0.3, ax=None):
@@ -289,11 +318,16 @@ def visualize_tree(node, depth=0, x=0.5, y=1.0, x_offset=0.3, ax=None):
     if depth == 0:
         plt.show()
 
+clean_data = np.loadtxt("./clean_dataset.txt")
+noisy_data = np.loadtxt("./noisy_dataset.txt")
 
+tree, d = decision_tree_learning(clean_data, 0, 10)
 
 visualize_tree(tree, depth=0, x=0.5, y=1.0, x_offset=0.1, ax=None)
 
 #print(kfoldCV(10, clean_data, 5))
 
 print(evaluate_accuracy(tree, clean_data))
+
+print(pruneTest(0.25, noisy_data, 25))
 
