@@ -36,6 +36,9 @@ class stump:
 
 def decision_tree_learning(X_y, d, max_d):
     if len(np.unique(X_y[:,-1])) == 1 or d>= max_d:
+
+        # pure node or max depth reached, create leaf node
+
         new_stump = stump()
         #new_stump.label = X_y[:,-1][0]
 
@@ -50,6 +53,9 @@ def decision_tree_learning(X_y, d, max_d):
         return new_stump, d
     
     else:
+
+        # recursive split
+
         feature, value = find_split(X_y)
 
 
@@ -130,8 +136,13 @@ def find_prunable_nodes(node):
     prunable_nodes += find_prunable_nodes(node.right)
 
     return prunable_nodes
-    
+
+
+
+   
 def pruneOneStump(s):
+
+    # Prune and merge the leaf children of one node
 
     totalBinnedCounts = s.left.leafcount + s.right.leafcount
 
@@ -330,4 +341,5 @@ visualize_tree(tree, depth=0, x=0.5, y=1.0, x_offset=0.1, ax=None)
 print(evaluate_accuracy(tree, clean_data))
 
 print(pruneTest(0.25, noisy_data, 25))
+
 
