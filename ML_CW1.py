@@ -1,7 +1,10 @@
 import numpy as np
-import matplotlib as plt
+import matplotlib.pyplot as plt
 
 # Left nodes contain x <= than value
+
+
+# stump = nodes, used interchangably here
 
 class stump:
 
@@ -11,6 +14,8 @@ class stump:
     value = None
     left = None
     right = None
+
+    leafcount = None
 
     def __init__(self):
 
@@ -34,7 +39,13 @@ def decision_tree_learning(X_y, d, max_d):
         new_stump = stump()
         #new_stump.label = X_y[:,-1][0]
 
-        new_stump.label = np.bincount(X_y[:, -1].astype(int)).argmax()
+        binnedCount = np.bincount(X_y[:, -1].astype(int))
+
+        new_stump.label = binnedCount.argmax()
+
+
+
+        new_stump.leafcount = np.pad(binnedCount, (0, max(0, 5 - len(binnedCount))))
 
         return new_stump, d
     
@@ -100,6 +111,41 @@ def entropy(X_y):
     return H
 
 
+def find_prunable_nodes(node):
+    
+    prunable_nodes = []
+    
+    
+    if node is None or node.feature is None:
+        return prunable_nodes
+    
+    # Check if both children are leaf nodes
+    if node.left and node.right:
+        if node.left.feature is None and node.right.feature is None:
+            # If both are leaf nodes, add the current node to the list
+            prunable_nodes.append(node)
+
+    # Recursively check the left and right subtrees
+    prunable_nodes += find_prunable_nodes(node.left)
+    prunable_nodes += find_prunable_nodes(node.right)
+
+    return prunable_nodes
+    
+def pruneOneStump(s):
+
+    totalBinnedCounts = s.left.leafcount + s.right.leafcount
+
+    s.label = totalBinnedCounts.argmax()
+
+    s.leafcount = totalBinnedCounts
+
+    s.feature = None
+
+    s.value = None
+
+    s.left = None
+    s.right = None
+
 
 def evaluate_accuracy(tree, X_test_y):
 
@@ -123,9 +169,131 @@ def evaluate_accuracy(tree, X_test_y):
     return acc
 
 
-clean_data = np.loadtxt("./noisy_dataset.txt")
+
+def pruneTree(tree, validationSet):
+
+    baseAcc = evaluate_accuracy(tree, validationSet)
+
+    improvement = True
+
+    while(improvement):
+        candidateNodes = find_prunable_nodes(tree)
+        improvement = False
+        
+
+        for node in candidateNodes:
+
+            # info for undoing the prune
+            leftChild = node.left
+            rightChild = node.right
+            feature = node.feature
+            value = node.value
+
+            pruneOneStump(node)
+
+            if (evaluate_accuracy(tree, validationSet) < baseAcc):
+
+                # undo the prune if the accuracy got worse
+                node.left = leftChild
+                node.right = rightChild
+                node.feature = feature
+                node.value = value
+
+                node.label = None
+                node.leafcount = None
+            else:
+                improvement = True
+                break
 
 
-tree, d = decision_tree_learning(clean_data, 0, 4)
+
+
+def kfoldCV(k, X_y, maxd):
+
+    accs = np.zeros(k)
+
+    validationSize = X_y.shape[0]//k
+
+    shuffledX_y = np.random.permutation(X_y)
+
+    for i in range(k):
+
+        start = (i) * validationSize
+        end = (i + 1) * validationSize
+
+        validationSet = shuffledX_y[start:end,:]
+
+        trainingSet = np.delete(shuffledX_y, np.s_[start:end], axis=0)
+
+        tree, d = decision_tree_learning(trainingSet, 0, maxd)
+
+        accs[i] = evaluate_accuracy(tree, validationSet)
+
+    return accs, np.average(accs)
+
+
+def confusionMatrix(y, y_hat, cat_count):
+    #cat_count = np.unique(np.concatenate(y, y_hat)).shape[0]
+
+    conf = np.zeros(cat_count, cat_count)
+
+    for Y, Yhat in zip(y, y_hat):
+        
+        conf[Y, Yhat] += 1
+
+    return conf
+
+
+clean_data = np.loadtxt("./clean_dataset.txt")
+
+
+tree, d = decision_tree_learning(clean_data, 0, 10)
+
+
+def visualize_tree(node, depth=0, x=0.5, y=1.0, x_offset=0.3, ax=None):
+
+    if ax is None:
+        plt.close('all') 
+        fig, ax = plt.subplots(figsize=(100, 80)) 
+        ax.set_xlim(0, 1)
+        ax.set_ylim(0, 1)
+        ax.set_axis_off()
+
+
+    if node is None:
+        return
+
+   
+    if node.feature is None:
+        ax.text(x, y, f'Label: {node.label}', bbox=dict(facecolor='white', edgecolor='black'), ha='center')
+    else:
+        ax.text(x, y, f'Feature: {node.feature}\n<= {node.value}', bbox=dict(facecolor='white', edgecolor='black'), ha='center')
+
+   
+    next_y = y - 0.1  # Move downwards for child
+    next_x_offset = x_offset / (depth + 0.3)  # Reduce x_offset as depth increases
+
+
+
+    if node.left:
+        next_x_left = x - next_x_offset  # Move left child to the left
+        ax.plot([x, next_x_left], [y, next_y], 'k-')  # Draw line to the left child
+        visualize_tree(node.left, depth + 1, next_x_left, next_y, x_offset, ax)
+
+
+    if node.right:
+        next_x_right = x + next_x_offset  
+        ax.plot([x, next_x_right], [y, next_y], 'k-')  
+        visualize_tree(node.right, depth + 1, next_x_right, next_y, x_offset, ax)
+
+    if depth == 0:
+        plt.show()
+
+
+
+visualize_tree(tree, depth=0, x=0.5, y=1.0, x_offset=0.1, ax=None)
+
+#print(kfoldCV(10, clean_data, 5))
 
 print(evaluate_accuracy(tree, clean_data))
+
