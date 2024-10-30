@@ -221,7 +221,8 @@ def pruneTree(tree, validationSet):
 
 def kfoldCV(k, X_y, maxd):
 
-    accs = np.zeros(k)
+    cat_count = len(np.unique(X_y[:, -1]))
+    confusions = np.zeros((cat_count, cat_count))
 
     validationSize = X_y.shape[0]//k
 
@@ -238,9 +239,36 @@ def kfoldCV(k, X_y, maxd):
 
         tree, d = decision_tree_learning(trainingSet, 0, maxd)
 
-        accs[i] = evaluate_accuracy(tree, validationSet)
+        X_test = validationSet[:, :-1] 
+        y_test = validationSet[:, -1]
+        y_hat = np.array([tree.evaluate(x) for x in X_test])
+        
+        confusion_matrix = confusionMatrix(y_test.astype(int), y_hat.astype(int), cat_count)
+        confusions += confusion_matrix
+            
+    avg_confusion = confusions / k
+    
+    avg_accuracy = np.sum(np.diag(avg_confusion)) / np.sum(avg_confusion)
+    
+    precisions, recalls, f1_scores = [], [], []
+    for i in range(cat_count):
+        tp = avg_confusion[i, i]
+        fn = np.sum(avg_confusion[i, :]) - tp
+        fp = np.sum(avg_confusion[:, i]) - tp
 
-    return accs, np.average(accs)
+        recall = tp / (tp + fn) if (tp + fn) > 0 else 0
+        precision = tp / (tp + fp) if (tp + fp) > 0 else 0
+        f1 = (2 * precision * recall) / (precision + recall) if (precision + recall) > 0 else 0
+
+        recalls.append(recall)
+        precisions.append(precision)
+        f1_scores.append(f1)
+
+    precisions = [float(p) for p in precisions]
+    recalls = [float(r) for r in recalls]
+    f1_scores = [float(f) for f in f1_scores]
+
+    return avg_confusion, avg_accuracy, precisions, recalls, f1_scores
 
 
 
@@ -278,15 +306,36 @@ def pruneTest(vsize, X_y, maxd):
 def confusionMatrix(y, y_hat, cat_count):
     #cat_count = np.unique(np.concatenate(y, y_hat)).shape[0]
 
-    conf = np.zeros(cat_count, cat_count)
+    conf = np.zeros((cat_count, cat_count))
 
     for Y, Yhat in zip(y, y_hat):
         
-        conf[Y, Yhat] += 1
+        conf[Y-1, Yhat-1] += 1
 
     return conf
 
 
+
+def findAvgDepth(tree, depth=0):
+    if tree.feature is None:  
+        return (depth, 1)  
+    
+   
+    leftDepthSum, leftLeafCount = findAvgDepth(tree.left, depth + 1)
+    rightDepthSum, rightLeafCount = findAvgDepth(tree.right, depth + 1)
+    
+    
+    totalDepth = leftDepthSum + rightDepthSum
+    totalLeafCount = leftLeafCount + rightLeafCount
+    
+    return totalDepth, totalLeafCount
+
+
+def calculateAvgDepth(tree):
+    totalDepth, totalLeafCount = findAvgDepth(tree)
+    if totalLeafCount == 0:  
+        return 0
+    return totalDepth / totalLeafCount
 
 
 
@@ -329,17 +378,33 @@ def visualize_tree(node, depth=0, x=0.5, y=1.0, x_offset=0.3, ax=None):
     if depth == 0:
         plt.show()
 
-clean_data = np.loadtxt("./clean_dataset.txt")
-noisy_data = np.loadtxt("./noisy_dataset.txt")
+clean_data = np.loadtxt("./wifi_db/clean_dataset.txt")
+noisy_data = np.loadtxt("./wifi_db/noisy_dataset.txt")
 
-tree, d = decision_tree_learning(clean_data, 0, 10)
+#tree, d = decision_tree_learning(clean_data, 0, 10)
 
-visualize_tree(tree, depth=0, x=0.5, y=1.0, x_offset=0.1, ax=None)
+#visualize_tree(tree, depth=0, x=0.5, y=1.0, x_offset=0.1, ax=None)
 
-#print(kfoldCV(10, clean_data, 5))
+print("Cross validation classification metrics for clean data: ")
 
-print(evaluate_accuracy(tree, clean_data))
+confusion, accuracy, precisions, recalls, f1_scores = kfoldCV(10, clean_data, 20)
+print("confusion: ", confusion)
+print("accuracy: ", round(accuracy, 6))
+print("precisions: ", [round(p, 6) for p in precisions])
+print("recalls: ", [round(r, 6) for r in recalls])
+print("F1-measures: ", [round(f, 6) for f in f1_scores])
 
-print(pruneTest(0.25, noisy_data, 25))
+print("Cross validation classification metrics for noisy data: ")
+
+confusion, accuracy, precisions, recalls, f1_scores = kfoldCV(10, noisy_data, 20)
+print("confusion: ", confusion)
+print("accuracy: ", round(accuracy, 6))
+print("precisions: ", [round(p, 6) for p in precisions])
+print("recalls: ", [round(r, 6) for r in recalls])
+print("F1-measures: ", [round(f, 6) for f in f1_scores])
+
+#print(evaluate_accuracy(tree, clean_data))
+
+#print(pruneTest(0.25, noisy_data, 25))
 
 
