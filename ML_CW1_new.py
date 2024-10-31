@@ -453,7 +453,7 @@ if __name__ == "__main__":
     print("\n" + "-" * 50 + "\n")
 
     print("Cross-validation metrics for noisy data:")
-    confusion, accuracy, precisions, recalls, f1_scores = dt_noisy.kfold_cross_validation(
+    accuracy, confusion, precisions, recalls, f1_scores = dt_noisy.kfold_cross_validation(
         10, noisy_data)
     noisy_avg_depth = dt_noisy.calculate_avg_depth()
     print(f"Average Depth: {round(noisy_avg_depth, 2)}")
