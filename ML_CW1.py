@@ -46,14 +46,14 @@ class stump:
                 return self.right.evaluate(x)
 
 
-def decision_tree_learning(train_data, d, max_d):
+def decision_tree_learning(train_data, d, max_d=np.inf):
     """
     Recursively build a decision tree.
 
     Args:
         train_data: The training data.
         d: The current depth of the tree.
-        max_d: The maximum depth of the tree.
+        max_d: The maximum depth of the tree. The default value is positive infinity, meaning the depth of the tree is not limited.
 
     Returns:
         new_stump: The root stump of the decision tree.
