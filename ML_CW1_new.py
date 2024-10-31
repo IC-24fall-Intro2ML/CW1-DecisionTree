@@ -266,7 +266,7 @@ class DecisionTreeClassifier:
                 accuracy, confusion_matrix, precision, recall, f1 = self.evaluate_metrics(
                     tree, outer_test_set)
                 inner_results.append(
-                    (accuracy, confusion_matrix, precision, recall, f1, avg_depth))
+                    (accuracy, confusion_matrix, precision, recall, f1))
 
             # Average results from inner folds for the current outer test fold
             avg_inner_accuracy = np.mean(
@@ -286,7 +286,7 @@ class DecisionTreeClassifier:
             f1_scores.append(avg_inner_f1)
 
             print(f"Outer Fold {p + 1}/{outer_folds} - Test Fold Metrics: "
-                  f"Accuracy: {avg_inner_accuracy:.4f}, Precision: {avg_inner_precision:.4f}, Recall: {avg_inner_recall:.4f}, F1: {avg_inner_f1:.4f}, Avg Depth: {avg_inner_depth:.2f}")
+                  f"Accuracy: {avg_inner_accuracy:.4f}, Precision: {avg_inner_precision:.4f}, Recall: {avg_inner_recall:.4f}, F1: {avg_inner_f1:.4f}")
 
         # Final average metrics across all outer folds
         avg_confusion = np.mean(confusion_matrices, axis=0)
@@ -298,7 +298,7 @@ class DecisionTreeClassifier:
         print(
             f"\nNested Cross-Validation Average Metrics across {outer_folds} outer folds:")
         print(f"Accuracy: {avg_accuracy:.4f}, Precision: {
-            avg_precision:.4f}, Recall: {avg_recall:.4f}, F1: {avg_f1:.4f}")
+              avg_precision:.4f}, Recall: {avg_recall:.4f}, F1: {avg_f1:.4f}")
         print(f"Confusion Matrix:\n{avg_confusion}")
 
         return avg_confusion, avg_accuracy, avg_precision, avg_recall, avg_f1
