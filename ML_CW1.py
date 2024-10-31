@@ -18,14 +18,13 @@ class stump:
         right: The right child stump.
     """
 
-    leafcount = None  # count of each label in the leaf node
-
     def __init__(self, label=None, feature=None, value=None, left=None, right=None):
         self.label = label
         self.feature = feature
         self.value = value
         self.left = left
         self.right = right
+        leafcount = None
 
     def evaluate(self, x):
         """
@@ -63,7 +62,8 @@ def decision_tree_learning(train_data, d, max_d=np.inf):
     if len(np.unique(train_data[:, -1])) == 1 or d >= max_d:
         new_stump = stump()
 
-        binnedCount = np.bincount(train_data[:, -1].astype(int))
+        binnedCount = np.bincount(
+            train_data[:, -1].astype(int))  # count of each label
 
         new_stump.label = binnedCount.argmax()  # most common label
 
