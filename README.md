@@ -34,3 +34,12 @@ This project implements a decision tree algorithm and uses it to determine one o
 - `README.md`: This file.
 
 - `requirements.txt`: A file containing the required packages to run the code.
+
+## Notice
+
+The visualization function is implemented but commented out in the code. If you want to visualize the decision tree, you can uncomment the code in the `ML_CW1.py` file.
+
+The reason we commented out the function is to keep the code running without any stoppage.
+
+Here is one of the possible results of the decision tree visualization running on the **full dataset**:
+![Decision Tree Visualization](clean_data_tree.png)
