@@ -143,7 +143,7 @@ class DecisionTreeClassifier:
             for node in candidate_nodes:
                 left, right, feature, value = node.left, node.right, node.feature, node.value
                 self.prune_one_stump(node)
-                if self.val_error(tree, validation_set) < base_acc:
+                if self.val_error(tree, validation_set) < base_acc * 0.95:
                     node.left, node.right, node.feature, node.value = left, right, feature, value
                     node.label = None
                     node.leafcount = None
