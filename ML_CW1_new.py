@@ -213,14 +213,16 @@ class DecisionTreeClassifier:
             self.tree, _ = self.decision_tree_learning(training_set)
 
             # Evaluate metrics on the validation set for the current fold
-            confusion_matrix, _, _, _, _ = self.evaluate_metrics(self.tree, validation_set)
+            confusion_matrix, _, _, _, _ = self.evaluate_metrics(
+                self.tree, validation_set)
 
             # Accumulate confusion matrix across folds
             confusions += confusion_matrix
-       
+
         avg_confusion = confusions / k
-        avg_accuracy, avg_recalls, avg_precisions, avg_f1_scores = calculate_metrics_from_confusion_matrix(avg_confusion)        
-        
+        avg_accuracy, avg_recalls, avg_precisions, avg_f1_scores = self.calculate_metrics_from_confusion_matrix(
+            avg_confusion)
+
         return avg_confusion, avg_accuracy, avg_recalls, avg_precisions, avg_f1_scores
 
     def nested_cross_validation(self, data, outer_folds=10, inner_folds=9):
@@ -249,7 +251,8 @@ class DecisionTreeClassifier:
             start, end = p * \
                 outer_validation_size, (p + 1) * outer_validation_size
             outer_test_set = shuffled_data[start:end, :]
-            outer_train_val_set = np.delete(shuffled_data, np.s_[start:end], axis=0)
+            outer_train_val_set = np.delete(
+                shuffled_data, np.s_[start:end], axis=0)
 
             inner_validation_size = outer_train_val_set.shape[0] // inner_folds
             inner_results = []
@@ -268,12 +271,13 @@ class DecisionTreeClassifier:
                 self.prune_tree(tree, inner_validation_set)
 
                 # Evaluate pruned tree on outer test set
-                confusion_matrix, _, _, _, _ = self.evaluate_metrics(tree, outer_test_set)
+                confusion_matrix, _, _, _, _ = self.evaluate_metrics(
+                    tree, outer_test_set)
                 inner_results.append(confusion_matrix)
 
             # Average results from inner folds for the current outer test fold
             avg_inner_confusion = np.mean(inner_results, axis=0)
-            
+
             # Store results across outer folds
             confusion_matrices.append(avg_inner_confusion)
 
@@ -285,8 +289,9 @@ class DecisionTreeClassifier:
 
         # Final average metrics across all outer folds
         avg_confusion = np.mean(confusion_matrices, axis=0)
-        
-        avg_accuracy, avg_recalls, avg_precisions, avg_f1s = calculate_metrics_from_confusion_matrix(avg_confusion)
+
+        avg_accuracy, avg_recalls, avg_precisions, avg_f1s = self.calculate_metrics_from_confusion_matrix(
+            avg_confusion)
 
         return avg_confusion, avg_accuracy, avg_recalls, avg_precisions, avg_f1s
 
@@ -295,6 +300,36 @@ class DecisionTreeClassifier:
         for Y, Yhat in zip(y, y_hat):
             conf[Y-1, Yhat-1] += 1
         return conf
+
+    def calculate_metrics_from_confusion_matrix(self, confusion_matrix):
+        """
+        Calculate accuracy, recall, precision, and F1 scores from a confusion matrix.
+
+        Args:
+            confusion_matrix (np.array): Confusion matrix of shape (n_classes, n_classes).
+
+        Returns:
+            accuracy (float): Overall accuracy.
+            recalls (list): Recall per class.
+            precisions (list): Precision per class.
+            f1_scores (list): F1 score per class.
+        """
+        accuracy = np.trace(confusion_matrix) / np.sum(confusion_matrix)
+
+        recalls, precisions, f1_scores = [], [], []
+        for i in range(confusion_matrix.shape[0]):
+            tp = confusion_matrix[i, i]
+            fn = np.sum(confusion_matrix[i, :]) - tp
+            fp = np.sum(confusion_matrix[:, i]) - tp
+            recall = tp / (tp + fn) if (tp + fn) > 0 else 0
+            precision = tp / (tp + fp) if (tp + fp) > 0 else 0
+            f1 = (2 * precision * recall) / (precision +
+                                             recall) if (precision + recall) > 0 else 0
+            recalls.append(recall)
+            precisions.append(precision)
+            f1_scores.append(f1)
+
+        return accuracy, recalls, precisions, f1_scores
 
     def evaluate_metrics(self, tree, X_test_y):
         """
@@ -316,9 +351,11 @@ class DecisionTreeClassifier:
 
         # Confusion matrix calculation
         cat_count = len(np.unique(y_test))
-        confusion_matrix = self.confusion_matrix(y_test.astype(int), y_hat.astype(int), cat_count)
+        confusion_matrix = self.confusion_matrix(
+            y_test.astype(int), y_hat.astype(int), cat_count)
 
-        accuracy, recalls, precisions, f1_scores = calculate_metrics_from_confusion_matrix(confusion_matrix)
+        accuracy, recalls, precisions, f1_scores = self.calculate_metrics_from_confusion_matrix(
+            confusion_matrix)
 
         return confusion_matrix, accuracy, recalls, precisions, f1_scores
 
@@ -371,6 +408,7 @@ class DecisionTreeClassifier:
 def load_data(file_path):
     return np.loadtxt(file_path)
 
+
 def print_info(confusion=None, accuracy=None, recalls=None, precisions=None, f1_scores=None):
     if confusion is not None:
         print("Confusion Matrix:\n", confusion)
@@ -379,38 +417,42 @@ def print_info(confusion=None, accuracy=None, recalls=None, precisions=None, f1_
     if recalls is not None:
         print("Recalls:", list(map(float, [round(r, 4) for r in recalls])))
     if precisions is not None:
-        print("Precisions:", list(map(float, [round(p, 4) for p in precisions])))
+        print("Precisions:", list(
+            map(float, [round(p, 4) for p in precisions])))
     if f1_scores is not None:
         print("F1-Scores:", list(map(float, [round(f, 4) for f in f1_scores])))
 
-def calculate_metrics_from_confusion_matrix(confusion_matrix):
-        """
-        Calculate accuracy, recall, precision, and F1 scores from a confusion matrix.
 
-        Args:
-            confusion_matrix (np.array): Confusion matrix of shape (n_classes, n_classes).
+# def calculate_metrics_from_confusion_matrix(confusion_matrix):
+    """
+    Calculate accuracy, recall, precision, and F1 scores from a confusion matrix.
 
-        Returns:
-            accuracy (float): Overall accuracy.
-            recalls (list): Recall per class.
-            precisions (list): Precision per class.
-            f1_scores (list): F1 score per class.
-        """
-        accuracy = np.trace(confusion_matrix) / np.sum(confusion_matrix)
+    Args:
+        confusion_matrix (np.array): Confusion matrix of shape (n_classes, n_classes).
 
-        recalls, precisions, f1_scores = [], [], []
-        for i in range(confusion_matrix.shape[0]):
-            tp = confusion_matrix[i, i]
-            fn = np.sum(confusion_matrix[i, :]) - tp
-            fp = np.sum(confusion_matrix[:, i]) - tp
-            recall = tp / (tp + fn) if (tp + fn) > 0 else 0
-            precision = tp / (tp + fp) if (tp + fp) > 0 else 0
-            f1 = (2 * precision * recall) / (precision + recall) if (precision + recall) > 0 else 0
-            recalls.append(recall)
-            precisions.append(precision)
-            f1_scores.append(f1)
+    Returns:
+        accuracy (float): Overall accuracy.
+        recalls (list): Recall per class.
+        precisions (list): Precision per class.
+        f1_scores (list): F1 score per class.
+    """
+    accuracy = np.trace(confusion_matrix) / np.sum(confusion_matrix)
 
-        return accuracy, recalls, precisions, f1_scores
+    recalls, precisions, f1_scores = [], [], []
+    for i in range(confusion_matrix.shape[0]):
+        tp = confusion_matrix[i, i]
+        fn = np.sum(confusion_matrix[i, :]) - tp
+        fp = np.sum(confusion_matrix[:, i]) - tp
+        recall = tp / (tp + fn) if (tp + fn) > 0 else 0
+        precision = tp / (tp + fp) if (tp + fp) > 0 else 0
+        f1 = (2 * precision * recall) / (precision +
+                                         recall) if (precision + recall) > 0 else 0
+        recalls.append(recall)
+        precisions.append(precision)
+        f1_scores.append(f1)
+
+    return accuracy, recalls, precisions, f1_scores
+
 
 # Main script
 if __name__ == "__main__":
@@ -428,7 +470,7 @@ if __name__ == "__main__":
     clean_avg_depth = dt_clean.calculate_avg_depth()
     print(f"Average Depth: {round(clean_avg_depth, 2)}")
     print_info(confusion, accuracy, recalls, precisions, f1_scores)
-    
+
     dt_clean.visualize_tree()
 
     print("\n" + "-" * 50 + "\n")
@@ -439,7 +481,7 @@ if __name__ == "__main__":
     noisy_avg_depth = dt_noisy.calculate_avg_depth()
     print(f"Average Depth: {round(noisy_avg_depth, 2)}")
     print_info(confusion, accuracy, recalls, precisions, f1_scores)
-    
+
     dt_noisy.visualize_tree()
 
     print("\n" + "-" * 50 + "\n")
