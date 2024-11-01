@@ -264,21 +264,29 @@ class DecisionTreeClassifier:
                 inner_start, inner_end = k * \
                     inner_validation_size, (k + 1) * inner_validation_size
                 inner_validation_set = outer_train_val_set[inner_start:inner_end, :]
+                print(f"Inner Fold {
+                      k + 1}/{inner_folds} - Validation Size: {inner_validation_set.shape[0]}")
                 inner_training_set = np.delete(outer_train_val_set, np.s_[
                     inner_start:inner_end], axis=0)
+                print(f"Inner Fold {
+                      k + 1}/{inner_folds} - Training Size: {inner_training_set.shape[0]}")
 
                 # Train on inner training set
-                self.tree, _ = self.decision_tree_learning(inner_training_set)
+                self.tree, depth = self.decision_tree_learning(
+                    inner_training_set)
+                print(f"Inner Fold {k + 1}/{inner_folds} - Depth: {depth}")
+                # self.visualize_tree(self.tree)
 
                 # Prune on inner validation set
                 self.prune_tree(self.tree, inner_validation_set)
+                depth_after_pruning, _ = self.find_avg_depth(self.tree)
+                self.visualize_tree(self.tree)
+                print(f"Inner Fold {
+                      k + 1}/{inner_folds} - Depth after pruning: {depth_after_pruning}")
 
                 # Evaluate pruned tree on outer test set
                 confusion_matrix = self.evaluate_metrics(
                     self.tree, outer_test_set)[0]
-
-                # Compute the tree depth
-                depth = self.calculate_avg_depth()
 
                 inner_results.append(confusion_matrix)
                 inner_depth.append(depth)
@@ -347,9 +355,9 @@ class DecisionTreeClassifier:
             node.left, depth + 1) if node.left else (0, 0)
         right_depth_sum, right_leaf_count = self.find_avg_depth(
             node.right, depth + 1) if node.right else (0, 0)
-        total_depth = left_depth_sum + right_depth_sum
+        max_depth = max(left_depth_sum, right_depth_sum)
         total_leaf_count = left_leaf_count + right_leaf_count
-        return total_depth, total_leaf_count
+        return max_depth, total_leaf_count
 
     def calculate_avg_depth(self):
         total_depth, total_leaf_count = self.find_avg_depth(self.tree)
@@ -446,47 +454,47 @@ if __name__ == "__main__":
     clean_data = load_data("./wifi_db/clean_dataset.txt")
     noisy_data = load_data("./wifi_db/noisy_dataset.txt")
 
-    # # Visualization (Bonus)
-    # clean_vis = DecisionTreeClassifier()
-    # vis_tree, _ = clean_vis.decision_tree_learning(clean_data)
-    # clean_vis.visualize_tree(vis_tree)
-    # # Vis finished
+    # Visualization (Bonus)
+    clean_vis = DecisionTreeClassifier()
+    vis_tree, _ = clean_vis.decision_tree_learning(clean_data)
+    clean_vis.visualize_tree(vis_tree)
+    # Vis finished
 
     dt_clean = DecisionTreeClassifier(max_depth=np.inf)
     dt_noisy = DecisionTreeClassifier(max_depth=np.inf)
 
     np.set_printoptions(suppress=True)
 
-    # print("Cross-validation metrics for clean data:")
-    # confusion, accuracy, recalls, precisions, f1_scores = dt_clean.kfold_cross_validation(
-    #     10, clean_data)
-    # clean_avg_depth = dt_clean.calculate_avg_depth()
-    # print(f"Average Depth: {round(clean_avg_depth, 2)}")
-    # print_info(confusion, accuracy, recalls, precisions, f1_scores)
+    print("Cross-validation metrics for clean data:")
+    confusion, accuracy, recalls, precisions, f1_scores = dt_clean.kfold_cross_validation(
+        10, clean_data)
+    clean_avg_depth = dt_clean.calculate_avg_depth()
+    print(f"Average Depth: {round(clean_avg_depth, 2)}")
+    print_info(confusion, accuracy, recalls, precisions, f1_scores)
 
-    # print("\n" + "-" * 50 + "\n")
+    print("\n" + "-" * 50 + "\n")
 
-    # print("Cross-validation metrics for noisy data:")
-    # confusion, accuracy, recalls, precisions, f1_scores = dt_noisy.kfold_cross_validation(
-    #     10, noisy_data)
-    # noisy_avg_depth = dt_noisy.calculate_avg_depth()
-    # print(f"Average Depth: {round(noisy_avg_depth, 2)}")
-    # print_info(confusion, accuracy, recalls, precisions, f1_scores)
+    print("Cross-validation metrics for noisy data:")
+    confusion, accuracy, recalls, precisions, f1_scores = dt_noisy.kfold_cross_validation(
+        10, noisy_data)
+    noisy_avg_depth = dt_noisy.calculate_avg_depth()
+    print(f"Average Depth: {round(noisy_avg_depth, 2)}")
+    print_info(confusion, accuracy, recalls, precisions, f1_scores)
 
-    # # dt_noisy.visualize_tree()
+    # dt_noisy.visualize_tree()
 
-    # print("\n" + "-" * 50 + "\n")
+    print("\n" + "-" * 50 + "\n")
 
-    # # Nested cross-validation for clean data
-    # print("Nested Cross-Validation for Clean Data:")
-    # outer_folds = 10
-    # print(f"Average Metrics across {outer_folds} outer folds:")
-    # confusion, accuracy, recalls, precisions, f1_scores, avg_depth = dt_clean.nested_cross_validation(
-    #     clean_data, outer_folds=10, inner_folds=9)
-    # print(f"Average Depth: {round(avg_depth, 2)}")
-    # print_info(confusion, accuracy, recalls, precisions, f1_scores)
+    # Nested cross-validation for clean data
+    print("Nested Cross-Validation for Clean Data:")
+    outer_folds = 10
+    print(f"Average Metrics across {outer_folds} outer folds:")
+    confusion, accuracy, recalls, precisions, f1_scores, avg_depth = dt_clean.nested_cross_validation(
+        clean_data, outer_folds=10, inner_folds=9)
+    print(f"Average Depth: {round(avg_depth, 2)}")
+    print_info(confusion, accuracy, recalls, precisions, f1_scores)
 
-    # print("\n" + "-" * 50 + "\n")
+    print("\n" + "-" * 50 + "\n")
 
     # Nested cross-validation for noisy data
     print("Nested Cross-Validation for Noisy Data:")
