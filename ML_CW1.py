@@ -1,5 +1,5 @@
 import numpy as np
-import matplotlib.pyplot as plt
+from matplotlib import pyplot as plt
 
 
 class Stump:
@@ -204,13 +204,14 @@ class DecisionTreeClassifier:
 
         # To accumulate confusion matrices of every fold
         confusions = np.zeros((cat_count, cat_count))
+        tree_depth = []
 
         for i in range(k):
             start, end = i * validation_size, (i + 1) * validation_size
             validation_set = shuffled_data[start:end, :]
             training_set = np.delete(shuffled_data, np.s_[start:end], axis=0)
 
-            self.tree, _ = self.decision_tree_learning(training_set)
+            self.tree, depth = self.decision_tree_learning(training_set)
 
             # Evaluate metrics on the validation set for the current fold
             confusion_matrix = self.evaluate_metrics(
@@ -219,11 +220,15 @@ class DecisionTreeClassifier:
             # Accumulate confusion matrix across folds
             confusions += confusion_matrix
 
+            # Append the depth
+            tree_depth.append(depth)
+
         avg_confusion = confusions / k
         avg_accuracy, avg_recalls, avg_precisions, avg_f1_scores = calculate_metrics_from_confusion_matrix(
             avg_confusion)
+        avg_depth = np.mean(tree_depth)
 
-        return avg_confusion, avg_accuracy, avg_recalls, avg_precisions, avg_f1_scores
+        return avg_confusion, avg_accuracy, avg_recalls, avg_precisions, avg_f1_scores, avg_depth
 
     def nested_cross_validation(self, data, outer_folds=10, inner_folds=9):
         """
@@ -274,22 +279,17 @@ class DecisionTreeClassifier:
                 # Train on inner training set
                 self.tree, depth = self.decision_tree_learning(
                     inner_training_set)
-                print(f"Inner Fold {k + 1}/{inner_folds} - Depth: {depth}")
-                # self.visualize_tree(self.tree)
 
                 # Prune on inner validation set
                 self.prune_tree(self.tree, inner_validation_set)
                 depth_after_pruning, _ = self.find_avg_depth(self.tree)
-                self.visualize_tree(self.tree)
-                print(f"Inner Fold {
-                      k + 1}/{inner_folds} - Depth after pruning: {depth_after_pruning}")
 
                 # Evaluate pruned tree on outer test set
                 confusion_matrix = self.evaluate_metrics(
                     self.tree, outer_test_set)[0]
 
                 inner_results.append(confusion_matrix)
-                inner_depth.append(depth)
+                inner_depth.append(depth_after_pruning)
 
             # Average results from inner folds for the current outer test fold
             avg_inner_confusion = np.mean(inner_results, axis=0)
@@ -455,9 +455,9 @@ if __name__ == "__main__":
     noisy_data = load_data("./wifi_db/noisy_dataset.txt")
 
     # Visualization (Bonus)
-    clean_vis = DecisionTreeClassifier()
-    vis_tree, _ = clean_vis.decision_tree_learning(clean_data)
-    clean_vis.visualize_tree(vis_tree)
+    # clean_vis = DecisionTreeClassifier()
+    # vis_tree, _ = clean_vis.decision_tree_learning(clean_data)
+    # clean_vis.visualize_tree(vis_tree)
     # Vis finished
 
     dt_clean = DecisionTreeClassifier(max_depth=np.inf)
@@ -466,18 +466,16 @@ if __name__ == "__main__":
     np.set_printoptions(suppress=True)
 
     print("Cross-validation metrics for clean data:")
-    confusion, accuracy, recalls, precisions, f1_scores = dt_clean.kfold_cross_validation(
+    confusion, accuracy, recalls, precisions, f1_scores, clean_avg_depth = dt_clean.kfold_cross_validation(
         10, clean_data)
-    clean_avg_depth = dt_clean.calculate_avg_depth()
     print(f"Average Depth: {round(clean_avg_depth, 2)}")
     print_info(confusion, accuracy, recalls, precisions, f1_scores)
 
     print("\n" + "-" * 50 + "\n")
 
     print("Cross-validation metrics for noisy data:")
-    confusion, accuracy, recalls, precisions, f1_scores = dt_noisy.kfold_cross_validation(
+    confusion, accuracy, recalls, precisions, f1_scores, noisy_avg_depth = dt_noisy.kfold_cross_validation(
         10, noisy_data)
-    noisy_avg_depth = dt_noisy.calculate_avg_depth()
     print(f"Average Depth: {round(noisy_avg_depth, 2)}")
     print_info(confusion, accuracy, recalls, precisions, f1_scores)
 
