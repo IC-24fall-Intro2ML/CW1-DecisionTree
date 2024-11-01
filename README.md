@@ -1,5 +1,4 @@
 # CW1-DecisionTree
-<<<<<<< HEAD
 
 This project implements a decision tree algorithm and uses it to determine one of the indoor locations based on WIFI signal strengths collected from a mobile phone.
 
@@ -35,7 +34,3 @@ This project implements a decision tree algorithm and uses it to determine one o
 - `README.md`: This file.
 
 - `requirements.txt`: A file containing the required packages to run the code.
-=======
- This is a project of implementing a decision tree algorithm and using it to determine one of the indoor locations based on WIFI signal strengths collected from a mobile phone.
-
->>>>>>> e3c3d191a6ef56a25fabc87fdd8f8a9b56524a11
